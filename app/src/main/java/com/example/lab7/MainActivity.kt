@@ -9,12 +9,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.ZoneOffset
@@ -39,21 +45,24 @@ fun ChatEntry(mirror: Boolean, pfpId: Int, message: String, sentOn: Instant) {
         .withZone(ZoneOffset.UTC)
         .format(sentOn)
 
-    val elements = listOf<@Composable () -> Unit>(
-        { Image(painterResource(pfpId), "Profile Picture") },
-        {
+    // Swap layout direction if mirrored
+    val layoutDirection = if (mirror) LayoutDirection.Rtl else LayoutDirection.Ltr
+
+    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Image(
+                painter = painterResource(pfpId),
+                contentDescription = "Profile Picture",
+                modifier = Modifier.size(40.dp)
+            )
             Column {
                 Text(message)
                 Text(timestamp, style = MaterialTheme.typography.labelSmall)
             }
-        }
-    )
-
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (!mirror) {
-            elements.forEach { it() }
-        } else {
-            elements.reversed().forEach { it() }
         }
     }
 }
