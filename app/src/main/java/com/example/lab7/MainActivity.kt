@@ -53,11 +53,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ChatEntryView(entry: ChatEntry) {
     val layoutDirection = if (entry.mirror) LayoutDirection.Rtl else LayoutDirection.Ltr
+    val arrangementDirection = if (entry.mirror) Arrangement.End else Arrangement.Start
 
     CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = arrangementDirection,
             modifier = Modifier.fillMaxWidth()
         ) {
             Image(
