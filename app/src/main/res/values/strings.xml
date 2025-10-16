@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Lab7</string>
+    <string name="dog_content_description">dog</string>
 </resources>
