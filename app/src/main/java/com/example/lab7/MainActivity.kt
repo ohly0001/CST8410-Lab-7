@@ -40,11 +40,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun ChatEntry(mirror: Boolean, pfpId: Int, message: String, sentOn: Instant) {
-    val timestamp = DateTimeFormatter
-        .ofPattern("yyyy-MM-dd HH:mm:ss")
-        .withZone(ZoneOffset.UTC)
-        .format(sentOn)
-
     // Swap layout direction if mirrored
     val layoutDirection = if (mirror) LayoutDirection.Rtl else LayoutDirection.Ltr
 
@@ -61,7 +56,10 @@ fun ChatEntry(mirror: Boolean, pfpId: Int, message: String, sentOn: Instant) {
             )
             Column {
                 Text(message)
-                Text(timestamp, style = MaterialTheme.typography.labelSmall)
+                Text(
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC).format(sentOn),
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
     }
