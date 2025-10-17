@@ -8,11 +8,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CallReceived
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,7 +46,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            Surface() {
+            Surface {
                 ChatWindow()
             }
         }
@@ -104,7 +107,10 @@ fun ChatWindow() {
                 },
                 enabled = !typedMessage.value.isEmpty()
             ) {
-                Text("S")
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send"
+                )
             }
             TextField(
                 value = typedMessage.value,
@@ -126,7 +132,10 @@ fun ChatWindow() {
                 },
                 enabled = !typedMessage.value.isEmpty()
             ) {
-                Text("R")
+                Icon(
+                    Icons.AutoMirrored.Filled.CallReceived,
+                    contentDescription = "Receive"
+                )
             }
         }
     }
