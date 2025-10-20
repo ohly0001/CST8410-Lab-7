@@ -23,6 +23,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -32,6 +35,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -65,19 +71,49 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            val isCompact = isCompact(this)
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(8.dp)
             ) {
-                ChatWindow()
+                ChatWindow(isCompact)
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+@Composable
+fun isCompact(activity: ComponentActivity): Boolean {
+    val windowSizeClass = calculateWindowSizeClass(activity)
+    return windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+}
+
+@Composable
+fun Dynamic(isVertical: Boolean, content: @Composable () -> Unit) {
+    if (isVertical) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            content()
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            content()
         }
     }
 }
 
 @Composable
 fun Details(
+    isCompact: Boolean,
     entry: ChatEntry,
     onDelete: () -> Unit,
     onClose: (Boolean) -> Unit
@@ -97,7 +133,7 @@ fun Details(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text("Message Details", fontSize = 20.sp)
 
@@ -119,46 +155,16 @@ fun Details(
                         .format(entry.sentOn)
                 }"
             )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = {
-                    if (canEdit && performedEdit) {
-                        entry.message = editedMessage
-                        performedEdit = false
-                    }
-                    canEdit = !canEdit
-                }) {
-                    Icon(
-                        if (canEdit) Icons.Filled.Save else Icons.Filled.Edit,
-                        contentDescription = if (canEdit) "Save" else "Edit"
-                    )
-                }
-
-                Button(onClick = { onDelete() }) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                }
-
-                Button(onClick = {
-                    if (performedEdit) {
-                        // Show options: Save & Close / Discard & Close / Cancel
-                        showCloseOptions = true
-                    } else {
-                        onClose(false)
-                    }
-                }) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close")
-                }
-            }
-
+            Spacer(Modifier.size(8.dp))
             if (showCloseOptions) {
-                Spacer(Modifier.size(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Dynamic(isCompact) {
                     Button(onClick = {
                         entry.message = editedMessage
                         performedEdit = false
                         showCloseOptions = false
                         onClose(true)
                     }) {
+                        Icon(Icons.Filled.Save, contentDescription = "Save")
                         Text("Save & Close")
                     }
                     Button(onClick = {
@@ -167,12 +173,52 @@ fun Details(
                         showCloseOptions = false
                         onClose(false)
                     }) {
-                        Text("Discard & Close")
+                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Close")
+                        Text("Close without Saving")
                     }
                     Button(onClick = {
                         showCloseOptions = false
                     }) {
+                        Icon(Icons.Filled.Cancel, contentDescription = "Cancel")
                         Text("Cancel")
+                    }
+                }
+            } else {
+                Dynamic(isCompact) {
+                    Button(onClick =
+                        {
+                            if (canEdit && performedEdit) {
+                                entry.message = editedMessage
+                                performedEdit = false
+                            }
+                            canEdit = !canEdit
+                        }
+                    ) {
+                        Icon(
+                            if (canEdit) Icons.Filled.Check else Icons.Filled.Edit,
+                            contentDescription = if (canEdit) "Done" else "Edit"
+                        )
+                        Text(if (canEdit) "Done" else "Edit")
+                    }
+
+                    Button(
+                        onClick = { onDelete() }
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                        Text("Delete")
+                    }
+
+                    Button(onClick = {
+                        canEdit = false
+                        if (performedEdit) {
+                            // Show options: Save & Close / Discard & Close / Cancel
+                            showCloseOptions = true
+                        } else {
+                            onClose(false)
+                        }
+                    }) {
+                        Icon(Icons.Filled.Close, contentDescription = "Close")
+                        Text("Close")
                     }
                 }
             }
@@ -243,7 +289,7 @@ fun ChatEntryView(entry: ChatEntry, onClick: () -> Unit) {
 }
 
 @Composable
-fun ChatWindow() {
+fun ChatWindow(isCompact: Boolean) {
     val typedMessage = remember { mutableStateOf("") }
     val sentMessages = remember { mutableStateListOf<ChatEntry>() }
     var selectedEntry by remember { mutableStateOf<ChatEntry?>(null) }
@@ -318,6 +364,7 @@ fun ChatWindow() {
                     .clickable(enabled = false) {}
             ) {
                 Details(
+                    isCompact = isCompact,
                     entry = entry,
                     onDelete = {
                         sentMessages.remove(entry)
