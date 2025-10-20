@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,6 +83,7 @@ fun Details(
     var canEdit by remember { mutableStateOf(false) }
     var editedMessage by remember { mutableStateOf(entry.message) }
     var performedEdit by remember { mutableStateOf(false) }
+    var showCloseOptions by remember { mutableStateOf(false) }
 
     Surface(
         color = Color(0xFFF7F7F7),
@@ -117,30 +119,59 @@ fun Details(
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { canEdit = !canEdit }) {
+                Button(onClick = {
+                    if (canEdit && performedEdit) {
+                        entry.message = editedMessage
+                        performedEdit = false
+                    }
+                    canEdit = !canEdit
+                }) {
                     Icon(
                         if (canEdit) Icons.Filled.Save else Icons.Filled.Edit,
                         contentDescription = if (canEdit) "Save" else "Edit"
                     )
-                    Spacer(Modifier.width(4.dp))
-                    Text(if (canEdit) "Save" else "Edit")
                 }
 
                 Button(onClick = { onDelete() }) {
                     Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                    Spacer(Modifier.width(4.dp))
-                    Text("Delete")
                 }
 
                 Button(onClick = {
                     if (performedEdit) {
-                        entry.message = editedMessage
+                        // Show options: Save & Close / Discard & Close / Cancel
+                        showCloseOptions = true
+                    } else {
+                        onClose(false)
                     }
-                    onClose(performedEdit)
                 }) {
                     Icon(Icons.Filled.Close, contentDescription = "Close")
-                    Spacer(Modifier.width(4.dp))
-                    Text("Close")
+                }
+            }
+
+            if (showCloseOptions) {
+                Spacer(Modifier.size(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {
+                        entry.message = editedMessage
+                        performedEdit = false
+                        showCloseOptions = false
+                        onClose(true)
+                    }) {
+                        Text("Save & Close")
+                    }
+                    Button(onClick = {
+                        performedEdit = false
+                        editedMessage = entry.message
+                        showCloseOptions = false
+                        onClose(false)
+                    }) {
+                        Text("Discard & Close")
+                    }
+                    Button(onClick = {
+                        showCloseOptions = false
+                    }) {
+                        Text("Cancel")
+                    }
                 }
             }
         }
@@ -149,6 +180,9 @@ fun Details(
 
 @Composable
 fun ChatEntryView(entry: ChatEntry, onClick: () -> Unit) {
+    // We need to recompose when entry.message changes
+    val message by rememberUpdatedState(entry.message)
+
     val messageColor = if (entry.mirror) Color.Black else Color.White
     val backgroundColor = if (entry.mirror) Color(0xFFE5DFE8) else Color(0xFF6750A3)
     val horizontalArrangement = if (entry.mirror) Arrangement.Start else Arrangement.End
@@ -181,7 +215,7 @@ fun ChatEntryView(entry: ChatEntry, onClick: () -> Unit) {
                     .background(backgroundColor, RoundedCornerShape(20.dp))
                     .padding(8.dp)
             ) {
-                Text(entry.message, color = messageColor, fontSize = 18.sp)
+                Text(message, color = messageColor, fontSize = 18.sp)
             }
 
             Text(
