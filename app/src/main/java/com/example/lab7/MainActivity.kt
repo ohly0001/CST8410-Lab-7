@@ -53,10 +53,12 @@ import java.time.format.DateTimeFormatter
 
 data class ChatEntry(
     val pfpId: Int,
-    var message: String,
-    val mirror: Boolean = false,
-    val sentOn: Instant = Instant.now()
-)
+    var messageInit: String,
+    val sentOn: Instant = Instant.now(),
+    var mirror: Boolean = false,
+) {
+    var message by mutableStateOf(messageInit)
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
