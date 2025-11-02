@@ -50,21 +50,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-
-data class ChatEntry(
-    val pfpId: Int,
-    var messageInit: String,
-    val sentOn: Instant = Instant.now(),
-    var mirror: Boolean = false,
-) {
-    var message by mutableStateOf(messageInit)
-}
+import androidx.room.Room
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,7 +104,7 @@ fun Dynamic(isVertical: Boolean, content: @Composable () -> Unit) {
 @Composable
 fun Details(
     isCompact: Boolean,
-    entry: ChatEntry,
+    entry: ChatMessage,
     onDelete: () -> Unit,
     onClose: (Boolean) -> Unit
 ) {
@@ -150,9 +140,7 @@ fun Details(
 
             Text(
                 "Sent On: ${
-                    DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss")
-                        .withZone(ZoneId.systemDefault())
-                        .format(entry.sentOn)
+                    entry.createdTime
                 }"
             )
             Spacer(Modifier.size(8.dp))
@@ -227,13 +215,13 @@ fun Details(
 }
 
 @Composable
-fun ChatEntryView(entry: ChatEntry, onClick: () -> Unit) {
+fun ChatMessageView(entry: ChatMessage, onClick: () -> Unit) {
     // We need to recompose when entry.message changes
     val message by rememberUpdatedState(entry.message)
 
-    val messageColor = if (entry.mirror) Color.Black else Color.White
-    val backgroundColor = if (entry.mirror) Color(0xFFE5DFE8) else Color(0xFF6750A3)
-    val horizontalArrangement = if (entry.mirror) Arrangement.Start else Arrangement.End
+    val messageColor = if (entry.isReceived) Color.Black else Color.White
+    val backgroundColor = if (entry.isReceived) Color(0xFFE5DFE8) else Color(0xFF6750A3)
+    val horizontalArrangement = if (entry.isReceived) Arrangement.Start else Arrangement.End
 
     Row(
         verticalAlignment = Alignment.Top,
@@ -243,7 +231,7 @@ fun ChatEntryView(entry: ChatEntry, onClick: () -> Unit) {
             .padding(4.dp)
             .clickable { onClick() }
     ) {
-        if (entry.mirror) {
+        if (entry.isReceived) {
             Image(
                 painter = painterResource(entry.pfpId),
                 contentDescription = "Profile Picture",
@@ -256,7 +244,7 @@ fun ChatEntryView(entry: ChatEntry, onClick: () -> Unit) {
 
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
-            horizontalAlignment = if (entry.mirror) Alignment.Start else Alignment.End
+            horizontalAlignment = if (entry.isReceived) Alignment.Start else Alignment.End
         ) {
             Box(
                 modifier = Modifier
@@ -266,16 +254,16 @@ fun ChatEntryView(entry: ChatEntry, onClick: () -> Unit) {
                 Text(message, color = messageColor, fontSize = 18.sp)
             }
 
-            Text(
-                DateTimeFormatter.ofPattern("HH:mm")
-                    .withZone(ZoneId.systemDefault())
-                    .format(entry.sentOn),
-                color = Color.Gray,
-                fontSize = 10.sp
-            )
+            entry.createdTime?.let {
+                Text(
+                    it,
+                    color = Color.Gray,
+                    fontSize = 10.sp
+                )
+            }
         }
 
-        if (!entry.mirror) {
+        if (!entry.isReceived) {
             Spacer(Modifier.width(8.dp))
             Image(
                 painter = painterResource(entry.pfpId),
@@ -290,9 +278,12 @@ fun ChatEntryView(entry: ChatEntry, onClick: () -> Unit) {
 
 @Composable
 fun ChatWindow(isCompact: Boolean) {
+    val db = Room.databaseBuilder(LocalContext.current, ChatMessageDatabase::class.java, "chat-app").build()
+    val mDAO = db.getMyDAO()
+
     val typedMessage = remember { mutableStateOf("") }
-    val sentMessages = remember { mutableStateListOf<ChatEntry>() }
-    var selectedEntry by remember { mutableStateOf<ChatEntry?>(null) }
+    val sentMessages = remember { mutableStateListOf<ChatMessage>() }
+    var selectedEntry by remember { mutableStateOf<ChatMessage?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -302,7 +293,7 @@ fun ChatWindow(isCompact: Boolean) {
                     .fillMaxWidth()
             ) {
                 items(sentMessages.size) { index ->
-                    ChatEntryView(sentMessages[index]) {
+                    ChatMessageView(sentMessages[index]) {
                         selectedEntry = sentMessages[index]
                     }
                 }
@@ -319,7 +310,7 @@ fun ChatWindow(isCompact: Boolean) {
             ) {
                 Button(
                     onClick = {
-                        sentMessages.add(ChatEntry(R.drawable.cat_pfp, typedMessage.value))
+                        sentMessages.add(ChatMessage(pfpId = R.drawable.cat_pfp, message=typedMessage.value))
                         typedMessage.value = ""
                     },
                     enabled = typedMessage.value.isNotEmpty(),
@@ -339,10 +330,10 @@ fun ChatWindow(isCompact: Boolean) {
                 Button(
                     onClick = {
                         sentMessages.add(
-                            ChatEntry(
-                                R.drawable.dog_pfp,
-                                typedMessage.value,
-                                mirror = true
+                            ChatMessage(
+                                pfpId = R.drawable.dog_pfp,
+                                message = typedMessage.value,
+                                isReceived = true
                             )
                         )
                         typedMessage.value = ""
