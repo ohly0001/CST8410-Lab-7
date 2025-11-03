@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -44,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -248,83 +250,134 @@ fun ChatWindow() {
     val sentMessages = remember { mutableStateListOf<ChatEntry>() }
     var selectedEntry by remember { mutableStateOf<ChatEntry?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                items(sentMessages.size) { index ->
-                    ChatEntryView(sentMessages[index]) {
-                        selectedEntry = sentMessages[index]
+    // Detect screen width to decide layout
+    val configuration = LocalConfiguration.current
+    val isTablet = configuration.screenWidthDp >= 600  // typical threshold for tablet
+
+    if (isTablet) {
+        // Tablet layout: show messages and details side-by-side
+        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Messages column
+            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    items(sentMessages.size) { index ->
+                        ChatEntryView(sentMessages[index]) {
+                            selectedEntry = sentMessages[index]
+                        }
                     }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            sentMessages.add(ChatEntry(R.drawable.cat_pfp, typedMessage.value))
+                            typedMessage.value = ""
+                        },
+                        enabled = typedMessage.value.isNotEmpty()
+                    ) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send") }
+
+                    TextField(
+                        value = typedMessage.value,
+                        onValueChange = { typedMessage.value = it },
+                        placeholder = { Text("Start Typing...") },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Button(
+                        onClick = {
+                            sentMessages.add(ChatEntry(R.drawable.dog_pfp, typedMessage.value, mirror = true))
+                            typedMessage.value = ""
+                        },
+                        enabled = typedMessage.value.isNotEmpty()
+                    ) { Icon(Icons.AutoMirrored.Filled.CallReceived, contentDescription = "Receive") }
                 }
             }
 
-            Row(
-                modifier = Modifier
-                    .shadow(8.dp, RoundedCornerShape(12.dp))
-                    .background(Color.White, RoundedCornerShape(12.dp))
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        sentMessages.add(ChatEntry(R.drawable.cat_pfp, typedMessage.value))
-                        typedMessage.value = ""
-                    },
-                    enabled = typedMessage.value.isNotEmpty(),
-                    shape = RoundedCornerShape(8.dp)
+            // Details panel column
+            selectedEntry?.let { entry ->
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
-                }
-
-                TextField(
-                    value = typedMessage.value,
-                    onValueChange = { typedMessage.value = it },
-                    placeholder = { Text("Start Typing...") },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.weight(1f)
-                )
-
-                Button(
-                    onClick = {
-                        sentMessages.add(
-                            ChatEntry(
-                                R.drawable.dog_pfp,
-                                typedMessage.value,
-                                mirror = true
-                            )
-                        )
-                        typedMessage.value = ""
-                    },
-                    enabled = typedMessage.value.isNotEmpty(),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.CallReceived, contentDescription = "Receive")
+                    Details(
+                        entry = entry,
+                        onDelete = {
+                            sentMessages.remove(entry)
+                            selectedEntry = null
+                        },
+                        onClose = { _ -> selectedEntry = null }
+                    )
                 }
             }
         }
+    } else {
+        // Phone layout: overlay details as before
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                ) {
+                    items(sentMessages.size) { index ->
+                        ChatEntryView(sentMessages[index]) { selectedEntry = sentMessages[index] }
+                    }
+                }
 
-        // Overlay the details panel when selected
-        selectedEntry?.let { entry ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xAA000000))
-                    .clickable(enabled = false) {}
-            ) {
-                Details(
-                    entry = entry,
-                    onDelete = {
-                        sentMessages.remove(entry)
-                        selectedEntry = null
-                    },
-                    onClose = { _ -> selectedEntry = null }
-                )
+                Row(
+                    modifier = Modifier
+                        .shadow(8.dp, RoundedCornerShape(12.dp))
+                        .background(Color.White, RoundedCornerShape(12.dp))
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            sentMessages.add(ChatEntry(R.drawable.cat_pfp, typedMessage.value))
+                            typedMessage.value = ""
+                        },
+                        enabled = typedMessage.value.isNotEmpty()
+                    ) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send") }
+
+                    TextField(
+                        value = typedMessage.value,
+                        onValueChange = { typedMessage.value = it },
+                        placeholder = { Text("Start Typing...") },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Button(
+                        onClick = {
+                            sentMessages.add(ChatEntry(R.drawable.dog_pfp, typedMessage.value, mirror = true))
+                            typedMessage.value = ""
+                        },
+                        enabled = typedMessage.value.isNotEmpty()
+                    ) { Icon(Icons.AutoMirrored.Filled.CallReceived, contentDescription = "Receive") }
+                }
+            }
+
+            // Overlay details
+            selectedEntry?.let { entry ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xAA000000))
+                        .clickable(enabled = false) {}
+                ) {
+                    Details(
+                        entry = entry,
+                        onDelete = {
+                            sentMessages.remove(entry)
+                            selectedEntry = null
+                        },
+                        onClose = { _ -> selectedEntry = null }
+                    )
+                }
             }
         }
     }
